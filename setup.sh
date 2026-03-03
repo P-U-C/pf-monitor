@@ -158,6 +158,29 @@ setup_discord() {
     ok "Discord webhook configured in alertmanager.yml"
 }
 
+# ── Discord startup notification ─────────────────────────────────
+send_startup_ping() {
+    # Extract the webhook URL from alertmanager.yml (without /slack suffix)
+    local webhook
+    webhook=$(grep -m1 'api_url:' alertmanager/alertmanager.yml \
+        | sed 's/.*api_url: *"//;s|/slack".*||;s/"$//')
+
+    if [[ -z "$webhook" ]] || [[ "$webhook" == *"YOUR_WEBHOOK"* ]]; then
+        return  # No webhook configured
+    fi
+
+    local hostname
+    hostname=$(hostname 2>/dev/null || echo "unknown")
+    local timestamp
+    timestamp=$(date -u +"%Y-%m-%d %H:%M UTC")
+
+    curl -sf -H "Content-Type: application/json" \
+        -d "{\"content\":\"✅ **PF Monitor started** on \`${hostname}\` at ${timestamp}\"}" \
+        "$webhook" >/dev/null 2>&1 && \
+        ok "Startup notification sent to Discord" || \
+        warn "Could not send Discord startup notification"
+}
+
 # ── Launch ───────────────────────────────────────────────────────
 launch() {
     local compose_file="$1"
@@ -241,6 +264,7 @@ main() {
         local)
             gen_env_local
             launch docker-compose.local.yml
+            send_startup_ping
             show_status_local
             ;;
         split-validator)
@@ -251,6 +275,7 @@ main() {
         split-monitor)
             gen_env_monitor
             launch docker-compose.monitor.yml
+            send_startup_ping
             show_status_monitor
             ;;
         *)

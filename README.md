@@ -102,6 +102,72 @@ pf-monitor/
         └── pf-overview.json         ← Pre-built dashboard
 ```
 
+## Verify It's Working
+
+**Check all containers are running:**
+```bash
+docker ps --format 'table {{.Names}}\t{{.Status}}' | grep pf-
+```
+
+**Check exporter is scraping postfiatd:**
+```bash
+curl -s http://localhost:9750/metrics | head -20
+```
+
+**Check Prometheus is scraping all targets:**
+```bash
+curl -s http://localhost:9090/api/v1/targets | python3 -c "
+import sys,json
+targets=json.load(sys.stdin)['data']['activeTargets']
+for t in targets:
+    print(f\"{t['labels'].get('job','?'):25s} {t['health']:10s} {t['lastError'][:50] if t['lastError'] else 'OK'}\")"
+```
+
+**Check alerts:**
+```bash
+# Quick summary of what's firing
+curl -s 'localhost:9090/api/v1/alerts' | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+alerts = data.get('data', {}).get('alerts', [])
+if not alerts:
+    print('No alerts firing')
+else:
+    for a in alerts:
+        print(f\"{a['labels'].get('severity','?'):8s} {a['labels'].get('alertname','')} — {a['annotations'].get('summary','')}\")
+"
+
+# Full alert detail
+curl -s localhost:9093/api/v2/alerts | python3 -m json.tool
+```
+
+**Test Discord webhook manually:**
+```bash
+# Replace with your actual webhook URL from .env or alertmanager.yml
+curl -H "Content-Type: application/json" \
+  -d '{"content":"🧪 Test alert from PF Monitor"}' \
+  "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN"
+```
+
+**Restart / stop / logs:**
+```bash
+# Restart everything
+docker compose -f docker-compose.local.yml restart
+
+# Restart one service
+docker compose -f docker-compose.local.yml restart postfiatd-exporter
+
+# View logs
+docker compose -f docker-compose.local.yml logs -f --tail 50
+
+# Full stop and start
+docker compose -f docker-compose.local.yml down
+docker compose -f docker-compose.local.yml up -d
+
+# Rebuild exporter after code change
+docker compose -f docker-compose.local.yml up -d --build postfiatd-exporter
+```
+
 ## Requirements
 
 - Docker + Docker Compose v2
