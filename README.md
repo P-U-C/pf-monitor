@@ -69,6 +69,25 @@ Pre-loaded at `http://<host>:3000` with panels for:
 - Governance (amendments, fee levels, tx queue)
 - Config integrity (file existence, size tracking)
 
+## Discord Webhook Setup
+
+When `setup.sh` prompts for a Discord webhook URL, here's how to get it:
+
+1. Open your Discord server
+2. Go to **Server Settings** → **Integrations** → **Webhooks**
+3. Click **New Webhook**
+4. Pick the channel you want alerts in (e.g. `#validator-alerts`)
+5. Name it something like `PF Monitor`
+6. Click **Copy Webhook URL**
+
+The URL will look like:
+
+```
+https://discord.com/api/webhooks/1234567890/abcdefg_long_token_here
+```
+
+Paste it as-is when prompted — the setup script automatically appends `/slack` to make it compatible with Alertmanager's Slack-compatible receiver.
+
 ## Alert Routing
 
 | Severity | Destination | Timing |
