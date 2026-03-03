@@ -269,35 +269,89 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 15 }, "unit": "percent" } },
-      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 36 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "options": { "0": { "color": "red", "text": "DOWN" }, "1": { "color": "green", "text": "RUNNING" } }, "type": "value" }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 36 },
       "id": 30,
-      "title": "Container CPU (postfiatd)",
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+      "title": "Container Status",
+      "type": "stat",
+      "targets": [{ "expr": "postfiatd_container_running", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 36 },
+      "id": 33,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+      "title": "Container Uptime",
+      "type": "stat",
+      "targets": [{ "expr": "postfiatd_container_uptime_seconds", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] }, "unit": "short" } },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 36 },
+      "id": 34,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+      "title": "Restarts",
+      "type": "stat",
+      "targets": [{ "expr": "postfiatd_container_restart_count", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "options": { "0": { "color": "green", "text": "OK" }, "1": { "color": "red", "text": "OOM KILLED" } }, "type": "value" }
+          ],
+          "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] }
+        }
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 36 },
+      "id": 35,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+      "title": "OOM Status",
+      "type": "stat",
+      "targets": [{ "expr": "postfiatd_container_oom_killed", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 15, "thresholdsStyle": { "mode": "line" } }, "unit": "percent", "max": 100, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 80 }, { "color": "red", "value": 95 }] } } },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 40 },
+      "id": 36,
+      "title": "Container CPU %",
       "type": "timeseries",
-      "targets": [{ "expr": "rate(container_cpu_usage_seconds_total{name='postfiatd'}[5m]) * 100", "legendFormat": "CPU %", "refId": "A" }]
+      "targets": [{ "expr": "postfiatd_container_cpu_percent", "legendFormat": "CPU %", "refId": "A" }]
     },
     {
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
       "fieldConfig": { "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 15 }, "unit": "bytes" } },
-      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 36 },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 40 },
       "id": 31,
-      "title": "Container Memory (postfiatd)",
+      "title": "Container Memory",
       "type": "timeseries",
       "targets": [
-        { "expr": "container_memory_usage_bytes{name='postfiatd'}", "legendFormat": "used", "refId": "A" },
-        { "expr": "container_memory_working_set_bytes{name='postfiatd'}", "legendFormat": "working set", "refId": "B" }
+        { "expr": "postfiatd_container_memory_usage_bytes", "legendFormat": "used", "refId": "A" },
+        { "expr": "postfiatd_container_memory_limit_bytes", "legendFormat": "limit", "refId": "B" }
       ]
     },
     {
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "fieldConfig": { "defaults": { "custom": { "lineWidth": 1, "fillOpacity": 10 }, "unit": "Bps" } },
-      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 36 },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 1, "fillOpacity": 10 }, "unit": "bytes" } },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 40 },
       "id": 32,
-      "title": "Container Network I/O (postfiatd)",
+      "title": "Container Network (cumulative)",
       "type": "timeseries",
       "targets": [
-        { "expr": "rate(container_network_receive_bytes_total{name='postfiatd'}[5m])", "legendFormat": "rx", "refId": "A" },
-        { "expr": "-rate(container_network_transmit_bytes_total{name='postfiatd'}[5m])", "legendFormat": "tx", "refId": "B" }
+        { "expr": "postfiatd_container_network_rx_bytes", "legendFormat": "rx", "refId": "A" },
+        { "expr": "postfiatd_container_network_tx_bytes", "legendFormat": "tx", "refId": "B" }
       ]
     },
 

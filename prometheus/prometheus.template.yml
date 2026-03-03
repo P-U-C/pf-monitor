@@ -40,13 +40,6 @@ scrape_configs:
         labels:
           instance: "validator-host"
 
-  - job_name: "cadvisor"
-    scrape_interval: 30s
-    static_configs:
-      - targets: ["VALIDATOR_HOST_IP:8080"]
-        labels:
-          instance: "validator-docker"
-
   - job_name: "alertmanager"
     static_configs:
       - targets: ["alertmanager:9093"]

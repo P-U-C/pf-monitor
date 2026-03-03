@@ -49,8 +49,7 @@ That's it. The script asks for your RPC URL, Discord webhook, and passwords inte
   ┌──────────────────────┐              ┌──────────────────────────┐
   │ Prometheus (:9090)   │──── scrapes ──→ postfiatd_exporter (:9750)
   │ Grafana    (:3000)   │              │ node_exporter      (:9100)
-  │ Alertmanager (:9093) │              │ cAdvisor           (:8080)
-  │        │             │              │                          │
+  │ Alertmanager (:9093) │              │                          │
   │        ▼             │              │ postfiatd (your node)    │
   │  Discord / Slack     │              └──────────────────────────┘
   └──────────────────────┘
@@ -68,25 +67,6 @@ Pre-loaded at `http://<host>:3000` with panels for:
 - Container CPU, memory, network
 - Governance (amendments, fee levels, tx queue)
 - Config integrity (file existence, size tracking)
-
-## Discord Webhook Setup
-
-When `setup.sh` prompts for a Discord webhook URL, here's how to get it:
-
-1. Open your Discord server
-2. Go to **Server Settings** → **Integrations** → **Webhooks**
-3. Click **New Webhook**
-4. Pick the channel you want alerts in (e.g. `#validator-alerts`)
-5. Name it something like `PF Monitor`
-6. Click **Copy Webhook URL**
-
-The URL will look like:
-
-```
-https://discord.com/api/webhooks/1234567890/abcdefg_long_token_here
-```
-
-Paste it as-is when prompted — the setup script automatically appends `/slack` to make it compatible with Alertmanager's Slack-compatible receiver.
 
 ## Alert Routing
 
@@ -122,31 +102,8 @@ pf-monitor/
         └── pf-overview.json         ← Pre-built dashboard
 ```
 
-## Docker Networking: Admin RPC Access
-
-The postfiatd exporter calls several admin-only RPC methods (`peers`, `feature`, `validators`).
-When the exporter runs in Docker, it reaches postfiatd via `host.docker.internal`, which resolves
-to the Docker bridge IP (typically `172.17.0.1` or `172.18.0.1`) — **not** `127.0.0.1`.
-
-If postfiatd's `admin` config only allows `127.0.0.1`, those calls return `Forbidden`.
-
-**Fix** — add the Docker bridge subnet to `postfiatd.cfg`:
-
-```ini
-[port_rpc_admin_local]
-...
-admin = 127.0.0.1,172.17.0.0/16,172.18.0.0/16
-```
-
-Restart postfiatd after editing. The exporter will then have full access to admin methods.
-
-**Graceful degradation** — if admin methods are blocked, the exporter does not crash.
-It logs a warning, increments `postfiatd_scrape_errors_total`, and skips those metrics
-(`postfiatd_peers_by_type`, `postfiatd_amendments_*`, `postfiatd_trusted_validators_total`).
-Core health metrics (`postfiatd_up`, server state, ledger, fee) are public and always available.
-
 ## Requirements
 
 - Docker + Docker Compose v2
-- Network access from monitor host to validator host on ports 9750, 9100, 8080
+- Network access from monitor host to validator host on ports 9750 and 9100
 - A Discord webhook URL for alerts (optional but recommended)

@@ -246,6 +246,58 @@ PUBLISHER_LISTS = Gauge(
     registry=registry,
 )
 
+# -- Docker container --
+CONTAINER_RUNNING = Gauge(
+    "postfiatd_container_running",
+    "Whether the postfiatd container is running (1=yes, 0=no)",
+    registry=registry,
+)
+CONTAINER_RESTARTS = Gauge(
+    "postfiatd_container_restart_count",
+    "Container restart count",
+    registry=registry,
+)
+CONTAINER_OOM_KILLED = Gauge(
+    "postfiatd_container_oom_killed",
+    "Whether the container was OOM killed (1=yes, 0=no)",
+    registry=registry,
+)
+CONTAINER_CPU_PERCENT = Gauge(
+    "postfiatd_container_cpu_percent",
+    "Container CPU usage percentage",
+    registry=registry,
+)
+CONTAINER_MEMORY_BYTES = Gauge(
+    "postfiatd_container_memory_usage_bytes",
+    "Container memory usage in bytes",
+    registry=registry,
+)
+CONTAINER_MEMORY_LIMIT = Gauge(
+    "postfiatd_container_memory_limit_bytes",
+    "Container memory limit in bytes",
+    registry=registry,
+)
+CONTAINER_NET_RX_BYTES = Gauge(
+    "postfiatd_container_network_rx_bytes",
+    "Container network bytes received",
+    registry=registry,
+)
+CONTAINER_NET_TX_BYTES = Gauge(
+    "postfiatd_container_network_tx_bytes",
+    "Container network bytes transmitted",
+    registry=registry,
+)
+CONTAINER_UPTIME = Gauge(
+    "postfiatd_container_uptime_seconds",
+    "Container uptime in seconds",
+    registry=registry,
+)
+CONTAINER_IMAGE = Info(
+    "postfiatd_container_image",
+    "Container image and ID info",
+    registry=registry,
+)
+
 # -- File integrity --
 FILE_EXISTS = Gauge(
     "postfiatd_config_file_exists",
@@ -416,6 +468,101 @@ def collect_validators(url: str):
     TRUSTED_VALIDATORS.set(total_trusted)
 
 
+def collect_docker(container_name: str, docker_socket: str):
+    """Collect container metrics via Docker socket API."""
+    import socket as sock
+    import http.client
+
+    class DockerSocket(http.client.HTTPConnection):
+        def __init__(self, socket_path):
+            super().__init__("localhost")
+            self.socket_path = socket_path
+
+        def connect(self):
+            self.sock = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
+            self.sock.connect(self.socket_path)
+
+    try:
+        conn = DockerSocket(docker_socket)
+
+        # Inspect container
+        conn.request("GET", f"/containers/{container_name}/json")
+        resp = conn.getresponse()
+        if resp.status != 200:
+            CONTAINER_RUNNING.set(0)
+            log.warning("Container %s not found (HTTP %d)", container_name, resp.status)
+            conn.close()
+            return
+        inspect = json.loads(resp.read())
+
+        running = inspect.get("State", {}).get("Running", False)
+        CONTAINER_RUNNING.set(1 if running else 0)
+        CONTAINER_RESTARTS.set(inspect.get("RestartCount", 0))
+        CONTAINER_OOM_KILLED.set(1 if inspect.get("State", {}).get("OOMKilled", False) else 0)
+
+        # Image info
+        CONTAINER_IMAGE.info({
+            "image": inspect.get("Config", {}).get("Image", ""),
+            "image_id": inspect.get("Image", "")[:20],
+        })
+
+        # Uptime
+        started = inspect.get("State", {}).get("StartedAt", "")
+        if started and running:
+            from datetime import datetime, timezone
+            try:
+                # Handle nanosecond timestamps by truncating to microseconds
+                started_clean = started.split(".")[0]
+                if started.endswith("Z"):
+                    started_dt = datetime.fromisoformat(started_clean + "+00:00")
+                else:
+                    started_dt = datetime.fromisoformat(started_clean)
+                uptime = (datetime.now(timezone.utc) - started_dt).total_seconds()
+                CONTAINER_UPTIME.set(max(0, uptime))
+            except Exception:
+                pass
+
+        if not running:
+            conn.close()
+            return
+
+        # Stats (one-shot, stream=false)
+        conn.request("GET", f"/containers/{container_name}/stats?stream=false")
+        resp = conn.getresponse()
+        if resp.status != 200:
+            conn.close()
+            return
+        stats = json.loads(resp.read())
+
+        # CPU
+        cpu_delta = stats.get("cpu_stats", {}).get("cpu_usage", {}).get("total_usage", 0) - \
+                    stats.get("precpu_stats", {}).get("cpu_usage", {}).get("total_usage", 0)
+        sys_delta = stats.get("cpu_stats", {}).get("system_cpu_usage", 0) - \
+                    stats.get("precpu_stats", {}).get("system_cpu_usage", 0)
+        n_cpus = stats.get("cpu_stats", {}).get("online_cpus", 1)
+        if sys_delta > 0 and cpu_delta >= 0:
+            CONTAINER_CPU_PERCENT.set((cpu_delta / sys_delta) * n_cpus * 100.0)
+
+        # Memory
+        mem = stats.get("memory_stats", {})
+        CONTAINER_MEMORY_BYTES.set(mem.get("usage", 0))
+        CONTAINER_MEMORY_LIMIT.set(mem.get("limit", 0))
+
+        # Network
+        networks = stats.get("networks", {})
+        rx = sum(v.get("rx_bytes", 0) for v in networks.values())
+        tx = sum(v.get("tx_bytes", 0) for v in networks.values())
+        CONTAINER_NET_RX_BYTES.set(rx)
+        CONTAINER_NET_TX_BYTES.set(tx)
+
+        conn.close()
+
+    except Exception as e:
+        SCRAPE_ERRORS.labels(method="docker").inc()
+        log.warning("Docker collect failed: %s", e)
+        CONTAINER_RUNNING.set(0)
+
+
 def collect_file_integrity(paths: list[str]):
     hash_info = {}
     for path_str in paths:
@@ -443,13 +590,15 @@ def collect_file_integrity(paths: list[str]):
 # Main scrape loop
 # ═══════════════════════════════════════════════════════════════════
 
-def scrape_all(rpc_url: str, admin_rpc_url: str, config_paths: list[str]):
+def scrape_all(rpc_url: str, admin_rpc_url: str, config_paths: list[str],
+               container_name: str = "postfiatd", docker_socket: str = "/var/run/docker.sock"):
     with SCRAPE_DURATION.time():
         collect_server_info(rpc_url)
         collect_peers(admin_rpc_url)
         collect_fee(rpc_url)
         collect_feature(admin_rpc_url)
         collect_validators(admin_rpc_url)
+        collect_docker(container_name, docker_socket)
         collect_file_integrity(config_paths)
 
 
@@ -459,6 +608,8 @@ def main():
     parser.add_argument("--admin-rpc-url", default=None)
     parser.add_argument("--port", type=int, default=9750)
     parser.add_argument("--interval", type=int, default=15, help="Scrape interval in seconds")
+    parser.add_argument("--container", default="postfiatd", help="Docker container name to monitor")
+    parser.add_argument("--docker-socket", default="/var/run/docker.sock", help="Docker socket path")
     parser.add_argument("--config-paths", nargs="+", default=[
         "/opt/postfiatd/postfiatd.cfg",
         "/opt/postfiatd/validator-keys.json",
@@ -469,6 +620,7 @@ def main():
 
     log.info("Starting postfiatd_exporter on :%d", args.port)
     log.info("  RPC: %s | Admin: %s", args.rpc_url, admin_url)
+    log.info("  Container: %s | Socket: %s", args.container, args.docker_socket)
     log.info("  Interval: %ds | Files: %s", args.interval, args.config_paths)
 
     # Start Prometheus HTTP server
@@ -483,7 +635,8 @@ def main():
     log.info("Metrics endpoint: http://0.0.0.0:%d/metrics", args.port)
 
     while True:
-        scrape_all(args.rpc_url, admin_url, args.config_paths)
+        scrape_all(args.rpc_url, admin_url, args.config_paths,
+                   args.container, args.docker_socket)
         time.sleep(args.interval)
 
 

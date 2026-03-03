@@ -16,10 +16,12 @@ services:
       - "127.0.0.1:9750:9750"
     volumes:
       - ${POSTFIATD_CONFIG_DIR:-/opt/postfiatd}:/opt/postfiatd:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     command: >
       python postfiatd_exporter.py
         --rpc-url ${POSTFIATD_RPC_URL:-http://host.docker.internal:5005}
         --port 9750 --interval 15
+        --container ${POSTFIATD_CONTAINER:-postfiatd}
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -35,22 +37,6 @@ services:
     pid: host
     volumes:
       - "/:/host:ro,rslave"
-
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
-    container_name: pf-cadvisor
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:8080:8080"
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-      - /dev/disk/:/dev/disk:ro
-    privileged: true
-    devices:
-      - /dev/kmsg:/dev/kmsg
 
   prometheus:
     image: prom/prometheus:v2.53.0
@@ -70,7 +56,6 @@ services:
     depends_on:
       - postfiatd-exporter
       - node-exporter
-      - cadvisor
 
   grafana:
     image: grafana/grafana:11.1.0

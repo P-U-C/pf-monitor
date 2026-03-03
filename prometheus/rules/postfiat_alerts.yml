@@ -239,42 +239,42 @@ groups:
 
       # -- Docker container down --
       - alert: PostFiatContainerDown
-        expr: absent(container_memory_usage_bytes{name="postfiatd"})
+        expr: postfiatd_container_running == 0
         for: 1m
         labels:
           severity: critical
         annotations:
           summary: "postfiatd container is down"
-          description: "cAdvisor cannot find the postfiatd container. Validator is offline."
+          description: "The postfiatd Docker container is not running. Validator is offline."
 
       # -- Container OOM --
       - alert: PostFiatContainerOOM
-        expr: container_oom_events_total{name="postfiatd"} > 0
+        expr: postfiatd_container_oom_killed == 1
         labels:
           severity: critical
         annotations:
-          summary: "postfiatd container OOM event"
-          description: "Container has {{ $value }} OOM events."
+          summary: "postfiatd container was OOM killed"
+          description: "Container was killed due to memory exhaustion."
 
-      # -- Container restart --
+      # -- Container restart count climbing --
       - alert: PostFiatContainerRestarting
-        expr: rate(container_start_time_seconds{name="postfiatd"}[15m]) > 0
+        expr: changes(postfiatd_container_restart_count[15m]) > 0
         for: 5m
         labels:
           severity: warning
         annotations:
           summary: "postfiatd container restarting frequently"
-          description: "Container appears to be restart-looping."
+          description: "Container restart count is climbing — possible crash loop."
 
-      # -- Container CPU throttle --
-      - alert: PostFiatContainerCPUThrottled
-        expr: rate(container_cpu_cfs_throttled_periods_total{name="postfiatd"}[5m]) / rate(container_cpu_cfs_periods_total{name="postfiatd"}[5m]) > 0.25
+      # -- Container CPU high --
+      - alert: PostFiatContainerCPUHigh
+        expr: postfiatd_container_cpu_percent > 90
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "postfiatd container CPU throttled >25%"
-          description: "Container is being CPU throttled. Consider raising limits."
+          summary: "postfiatd container CPU > 90%"
+          description: "Container CPU at {{ $value | printf \"%.1f\" }}%."
 
   # ═══════════════════════════════════════════════════════════════
   # POST FIAT SPECIFIC — integrity, governance, economics
