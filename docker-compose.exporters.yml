@@ -1,0 +1,54 @@
+# =============================================================================
+# SPLIT MODE — Exporters only (runs on validator host)
+# =============================================================================
+# Use: ./setup.sh split-validator
+# The monitor host runs docker-compose.monitor.yml and scrapes these remotely.
+# =============================================================================
+
+services:
+
+  postfiatd-exporter:
+    build:
+      context: ./exporters
+      dockerfile: Dockerfile
+    container_name: pf-postfiatd-exporter
+    restart: unless-stopped
+    ports:
+      - "${EXPORTER_BIND:-0.0.0.0}:9750:9750"
+    volumes:
+      - ${POSTFIATD_CONFIG_DIR:-/opt/postfiatd}:/opt/postfiatd:ro
+    command: >
+      python postfiatd_exporter.py
+        --rpc-url ${POSTFIATD_RPC_URL:-http://host.docker.internal:5005}
+        --port 9750 --interval 15
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.1
+    container_name: pf-node-exporter
+    restart: unless-stopped
+    ports:
+      - "${EXPORTER_BIND:-0.0.0.0}:9100:9100"
+    command:
+      - "--path.rootfs=/host"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    pid: host
+    volumes:
+      - "/:/host:ro,rslave"
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: pf-cadvisor
+    restart: unless-stopped
+    ports:
+      - "${EXPORTER_BIND:-0.0.0.0}:8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
