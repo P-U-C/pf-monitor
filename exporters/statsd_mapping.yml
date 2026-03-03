@@ -1,0 +1,44 @@
+# =============================================================================
+# StatsD → Prometheus metric mapping for postfiatd/rippled [insight] metrics
+# =============================================================================
+# Enable in postfiatd.cfg:
+#   [insight]
+#   server=statsd
+#   address=<statsd-exporter-host>:9125
+#   prefix=postfiatd
+# =============================================================================
+
+mappings:
+  # Ledger timing
+  - match: "*.ledger.close_time"
+    name: "postfiatd_statsd_ledger_close_time_ms"
+    labels:
+      prefix: "$1"
+
+  # Transaction counts
+  - match: "*.transactions.*"
+    name: "postfiatd_statsd_transactions"
+    labels:
+      prefix: "$1"
+      type: "$2"
+
+  # RPC call metrics
+  - match: "*.rpc.*"
+    name: "postfiatd_statsd_rpc_calls"
+    labels:
+      prefix: "$1"
+      method: "$2"
+
+  # Job queue
+  - match: "*.jobq.*"
+    name: "postfiatd_statsd_jobq"
+    labels:
+      prefix: "$1"
+      queue: "$2"
+
+  # Catch-all for other metrics
+  - match: "."
+    match_type: regex
+    name: "postfiatd_statsd_unmatched"
+    labels:
+      raw: "$1"

@@ -1,0 +1,443 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "🧠 Operator Status",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "options": { "0": { "color": "red", "text": "DOWN" }, "1": { "color": "green", "text": "UP" } }, "type": "value" }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      },
+      "gridPos": { "h": 4, "w": 3, "x": 0, "y": 1 },
+      "id": 1,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+      "title": "Node Reachable",
+      "type": "stat",
+      "targets": [{ "expr": "postfiatd_up", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "options": { "0": { "color": "red", "text": "NOT FULL" }, "1": { "color": "green", "text": "FULL" } }, "type": "value" }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        }
+      },
+      "gridPos": { "h": 4, "w": 3, "x": 3, "y": 1 },
+      "id": 2,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+      "title": "Server State",
+      "type": "stat",
+      "targets": [{ "expr": "postfiatd_server_state{postfiatd_server_state='full'}", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "orange", "value": 3 }, { "color": "green", "value": 5 }] },
+          "unit": "short"
+        }
+      },
+      "gridPos": { "h": 4, "w": 3, "x": 6, "y": 1 },
+      "id": 3,
+      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+      "title": "Peers",
+      "type": "stat",
+      "targets": [{ "expr": "postfiatd_peers_total", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 10 }, { "color": "red", "value": 30 }] },
+          "unit": "s"
+        }
+      },
+      "gridPos": { "h": 4, "w": 3, "x": 9, "y": 1 },
+      "id": 4,
+      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+      "title": "Ledger Age",
+      "type": "stat",
+      "targets": [{ "expr": "postfiatd_validated_ledger_age_seconds", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "gridPos": { "h": 4, "w": 3, "x": 12, "y": 1 },
+      "id": 5,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+      "title": "Ledger Seq",
+      "type": "stat",
+      "targets": [{ "expr": "postfiatd_validated_ledger_seq", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 10 }, { "color": "red", "value": 50 }] },
+          "unit": "ms"
+        }
+      },
+      "gridPos": { "h": 4, "w": 3, "x": 15, "y": 1 },
+      "id": 6,
+      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+      "title": "I/O Latency",
+      "type": "stat",
+      "targets": [{ "expr": "postfiatd_io_latency_ms", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "gridPos": { "h": 4, "w": 3, "x": 18, "y": 1 },
+      "id": 7,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+      "title": "Uptime",
+      "type": "stat",
+      "targets": [{ "expr": "postfiatd_uptime_seconds", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "gridPos": { "h": 4, "w": 3, "x": 21, "y": 1 },
+      "id": 8,
+      "options": { "colorMode": "value", "graphMode": "none", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+      "title": "Val. Quorum",
+      "type": "stat",
+      "targets": [{ "expr": "postfiatd_validation_quorum", "refId": "A" }]
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 101,
+      "title": "📈 Consensus & Ledger",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 15, "spanNulls": true }, "unit": "short" } },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 6 },
+      "id": 10,
+      "options": { "legend": { "displayMode": "list" }, "tooltip": { "mode": "multi" } },
+      "title": "Ledger Sequence",
+      "type": "timeseries",
+      "targets": [{ "expr": "postfiatd_validated_ledger_seq", "legendFormat": "ledger seq", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 15, "thresholdsStyle": { "mode": "line" } }, "unit": "s", "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 10 }, { "color": "red", "value": 30 }] } } },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 6 },
+      "id": 11,
+      "title": "Ledger Age",
+      "type": "timeseries",
+      "targets": [{ "expr": "postfiatd_validated_ledger_age_seconds", "legendFormat": "age", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 10 }, "unit": "short" } },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 13 },
+      "id": 12,
+      "title": "Peers",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "postfiatd_peers_total", "legendFormat": "total", "refId": "A" },
+        { "expr": "postfiatd_peers_by_type{type='inbound'}", "legendFormat": "inbound", "refId": "B" },
+        { "expr": "postfiatd_peers_by_type{type='outbound'}", "legendFormat": "outbound", "refId": "C" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 10 }, "unit": "s" } },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 13 },
+      "id": 13,
+      "title": "Last Close Convergence",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "postfiatd_last_close_converge_seconds", "legendFormat": "converge time", "refId": "A" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 10 }, "unit": "short" } },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 13 },
+      "id": 14,
+      "title": "Load Factor & Proposers",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "postfiatd_load_factor", "legendFormat": "load factor", "refId": "A" },
+        { "expr": "postfiatd_last_close_proposers", "legendFormat": "proposers", "refId": "B" }
+      ]
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 20 },
+      "id": 102,
+      "title": "🖥 Infrastructure",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 20, "thresholdsStyle": { "mode": "line" } }, "unit": "percent", "max": 100, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 80 }, { "color": "red", "value": 95 }] } } },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 21 },
+      "id": 20,
+      "title": "CPU Usage",
+      "type": "timeseries",
+      "targets": [{ "expr": "100 - (avg(rate(node_cpu_seconds_total{mode='idle'}[5m])) * 100)", "legendFormat": "CPU %", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 20, "thresholdsStyle": { "mode": "line" } }, "unit": "percent", "max": 100, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 80 }, { "color": "red", "value": 95 }] } } },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 21 },
+      "id": 21,
+      "title": "Memory Usage",
+      "type": "timeseries",
+      "targets": [{ "expr": "(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100", "legendFormat": "RAM %", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 20, "thresholdsStyle": { "mode": "line" } }, "unit": "percent", "max": 100, "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 75 }, { "color": "red", "value": 90 }] } } },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 21 },
+      "id": 22,
+      "title": "Disk Usage",
+      "type": "timeseries",
+      "targets": [{ "expr": "100 - (node_filesystem_avail_bytes{mountpoint='/'} / node_filesystem_size_bytes{mountpoint='/'} * 100)", "legendFormat": "Disk %", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 1, "fillOpacity": 10 }, "unit": "Bps" } },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 28 },
+      "id": 23,
+      "title": "Network I/O (Host)",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "rate(node_network_receive_bytes_total{device!='lo'}[5m])", "legendFormat": "rx {{device}}", "refId": "A" },
+        { "expr": "-rate(node_network_transmit_bytes_total{device!='lo'}[5m])", "legendFormat": "tx {{device}}", "refId": "B" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 1, "fillOpacity": 10 }, "unit": "Bps" } },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 28 },
+      "id": 24,
+      "title": "Disk I/O (Host)",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "rate(node_disk_read_bytes_total[5m])", "legendFormat": "read {{device}}", "refId": "A" },
+        { "expr": "-rate(node_disk_written_bytes_total[5m])", "legendFormat": "write {{device}}", "refId": "B" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 10 }, "unit": "short" } },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 28 },
+      "id": 25,
+      "title": "System Load",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "node_load1", "legendFormat": "1m", "refId": "A" },
+        { "expr": "node_load5", "legendFormat": "5m", "refId": "B" },
+        { "expr": "node_load15", "legendFormat": "15m", "refId": "C" },
+        { "expr": "count(node_cpu_seconds_total{mode='idle'})", "legendFormat": "cores", "refId": "D" }
+      ]
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 35 },
+      "id": 103,
+      "title": "🐳 Container Metrics",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 15 }, "unit": "percent" } },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 36 },
+      "id": 30,
+      "title": "Container CPU (postfiatd)",
+      "type": "timeseries",
+      "targets": [{ "expr": "rate(container_cpu_usage_seconds_total{name='postfiatd'}[5m]) * 100", "legendFormat": "CPU %", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 15 }, "unit": "bytes" } },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 36 },
+      "id": 31,
+      "title": "Container Memory (postfiatd)",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "container_memory_usage_bytes{name='postfiatd'}", "legendFormat": "used", "refId": "A" },
+        { "expr": "container_memory_working_set_bytes{name='postfiatd'}", "legendFormat": "working set", "refId": "B" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 1, "fillOpacity": 10 }, "unit": "Bps" } },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 36 },
+      "id": 32,
+      "title": "Container Network I/O (postfiatd)",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "rate(container_network_receive_bytes_total{name='postfiatd'}[5m])", "legendFormat": "rx", "refId": "A" },
+        { "expr": "-rate(container_network_transmit_bytes_total{name='postfiatd'}[5m])", "legendFormat": "tx", "refId": "B" }
+      ]
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 43 },
+      "id": 104,
+      "title": "🏛 Governance & Economics",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 44 },
+      "id": 40,
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "title": "Amendments Enabled",
+      "type": "stat",
+      "targets": [{ "expr": "postfiatd_amendments_enabled_total", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 44 },
+      "id": 41,
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "title": "Amendments Supported",
+      "type": "stat",
+      "targets": [{ "expr": "postfiatd_amendments_supported_total", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] }, "unit": "short" } },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 44 },
+      "id": 42,
+      "options": { "colorMode": "background", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "title": "Amendments Vetoed",
+      "type": "stat",
+      "targets": [{ "expr": "postfiatd_amendments_vetoed_total", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 44 },
+      "id": 43,
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "title": "Trusted Validators",
+      "type": "stat",
+      "targets": [{ "expr": "postfiatd_trusted_validators_total", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 10 }, "unit": "short" } },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 48 },
+      "id": 44,
+      "title": "Fee Levels (drops)",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "postfiatd_fee_drops_minimum", "legendFormat": "minimum", "refId": "A" },
+        { "expr": "postfiatd_fee_drops_median", "legendFormat": "median", "refId": "B" },
+        { "expr": "postfiatd_fee_drops_open_ledger", "legendFormat": "open ledger", "refId": "C" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 10 }, "unit": "short" } },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 48 },
+      "id": 45,
+      "title": "Transaction Queue",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "postfiatd_fee_current_queue_size", "legendFormat": "queue size", "refId": "A" },
+        { "expr": "postfiatd_fee_current_ledger_size", "legendFormat": "ledger size", "refId": "B" }
+      ]
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 55 },
+      "id": 105,
+      "title": "🔐 Config Integrity",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "options": { "0": { "color": "red", "text": "MISSING" }, "1": { "color": "green", "text": "OK" } }, "type": "value" }
+          ],
+          "thresholds": { "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 56 },
+      "id": 50,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "horizontal", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+      "title": "Critical Files",
+      "type": "stat",
+      "targets": [
+        { "expr": "postfiatd_config_file_exists", "legendFormat": "{{ filename }}", "refId": "A" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 1 }, "unit": "bytes" } },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 61 },
+      "id": 51,
+      "title": "Config File Sizes (detect truncation)",
+      "type": "timeseries",
+      "targets": [{ "expr": "postfiatd_config_file_size_bytes", "legendFormat": "{{ filename }}", "refId": "A" }]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": { "defaults": { "custom": { "lineWidth": 2, "fillOpacity": 10 }, "unit": "s" } },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 61 },
+      "id": 52,
+      "title": "State Duration (time in each state)",
+      "type": "timeseries",
+      "targets": [{ "expr": "postfiatd_state_accounting_duration_seconds", "legendFormat": "{{ state }}", "refId": "A" }]
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 39,
+  "tags": ["postfiat", "validator", "xrpl"],
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": false, "text": "Prometheus", "value": "prometheus" },
+        "hide": 2,
+        "name": "DS_PROMETHEUS",
+        "type": "datasource",
+        "query": "prometheus"
+      }
+    ]
+  },
+  "time": { "from": "now-3h", "to": "now" },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "Post Fiat Validator — Overview",
+  "uid": "pf-overview",
+  "version": 1
+}

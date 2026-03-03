@@ -1,0 +1,65 @@
+# =============================================================================
+# Prometheus Configuration — Post Fiat Validator Monitor
+# =============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+  external_labels:
+    monitor: "postfiat-validator"
+
+# ── Alert rules ──────────────────────────────────────────────────
+rule_files:
+  - "rules/*.yml"
+
+# ── Alertmanager ─────────────────────────────────────────────────
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# ── Scrape targets ───────────────────────────────────────────────
+scrape_configs:
+
+  # Prometheus self-monitoring
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Post Fiat custom exporter (JSON-RPC metrics)
+  - job_name: "postfiatd"
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["postfiatd-exporter:9750"]
+        labels:
+          instance: "validator"
+
+  # Host system metrics
+  - job_name: "node"
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          instance: "validator-host"
+
+  # Docker container metrics
+  - job_name: "cadvisor"
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["cadvisor:8080"]
+        labels:
+          instance: "validator-docker"
+
+  # Uncomment if using statsd_exporter for native rippled [insight] metrics
+  # - job_name: "postfiatd_statsd"
+  #   scrape_interval: 15s
+  #   static_configs:
+  #     - targets: ["statsd-exporter:9102"]
+
+  # Alertmanager metrics
+  - job_name: "alertmanager"
+    static_configs:
+      - targets: ["alertmanager:9093"]

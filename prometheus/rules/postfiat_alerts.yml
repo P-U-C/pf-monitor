@@ -1,0 +1,373 @@
+# =============================================================================
+# Post Fiat Validator Alert Rules
+# =============================================================================
+# Three groups:
+#   1. postfiatd_consensus  — Validator not participating, ledger stale
+#   2. postfiatd_infra      — Host & Docker health
+#   3. postfiatd_integrity  — Config drift, key issues, governance
+# =============================================================================
+
+groups:
+
+  # ═══════════════════════════════════════════════════════════════
+  # CONSENSUS & NETWORK
+  # ═══════════════════════════════════════════════════════════════
+  - name: postfiatd_consensus
+    interval: 15s
+    rules:
+
+      # -- Node unreachable --
+      - alert: PostFiatNodeDown
+        expr: postfiatd_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "postfiatd is unreachable"
+          description: "The exporter cannot reach postfiatd RPC for >1m. Validator is NOT contributing to consensus."
+
+      # -- Server state degraded --
+      - alert: PostFiatServerStateNotFull
+        expr: postfiatd_server_state{postfiatd_server_state="full"} != 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Server state is not 'full'"
+          description: "postfiatd has been outside 'full' state for >2m. Validator is not fully participating in consensus."
+
+      # -- Ledger age (stale) --
+      - alert: PostFiatLedgerStale
+        expr: postfiatd_validated_ledger_age_seconds > 10
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Validated ledger age > 10s"
+          description: "Ledger age is {{ $value }}s — possible sync issues or network partition."
+
+      - alert: PostFiatLedgerVeryStaleCritical
+        expr: postfiatd_validated_ledger_age_seconds > 30
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Validated ledger age > 30s — CRITICAL"
+          description: "Ledger age {{ $value }}s. Validator has likely fallen off consensus."
+
+      # -- Ledger not advancing --
+      - alert: PostFiatLedgerNotAdvancing
+        expr: deriv(postfiatd_validated_ledger_seq[5m]) == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Ledger sequence not advancing"
+          description: "Ledger seq has not changed in 5m. Node may be stuck."
+
+      # -- Peers too low --
+      - alert: PostFiatPeersLow
+        expr: postfiatd_peers_total < 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Peer count below 5"
+          description: "Only {{ $value }} peers connected. Consensus reliability degraded."
+
+      - alert: PostFiatPeersCritical
+        expr: postfiatd_peers_total < 2
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Peer count below 2 — CRITICAL"
+          description: "Only {{ $value }} peers. Effectively isolated from network."
+
+      # -- No inbound peers (network positioning) --
+      - alert: PostFiatNoInboundPeers
+        expr: postfiatd_peers_by_type{type="inbound"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No inbound peer connections"
+          description: "No peers are connecting inbound. Check firewall/VPN relay config."
+
+      # -- Load factor elevated --
+      - alert: PostFiatLoadFactorHigh
+        expr: postfiatd_load_factor > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Load factor elevated ({{ $value }})"
+          description: "High load factor indicates the node is under stress."
+
+      # -- I/O latency --
+      - alert: PostFiatIOLatencyHigh
+        expr: postfiatd_io_latency_ms > 50
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "I/O latency > 50ms"
+          description: "Disk I/O latency is {{ $value }}ms — may cause consensus timeouts."
+
+      - alert: PostFiatIOLatencyWarning
+        expr: postfiatd_io_latency_ms > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "I/O latency > 10ms"
+          description: "Disk I/O latency {{ $value }}ms — monitor for degradation."
+
+      # -- Convergence time --
+      - alert: PostFiatSlowConvergence
+        expr: postfiatd_last_close_converge_seconds > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Consensus convergence >5s"
+          description: "Last close took {{ $value }}s to converge."
+
+      # -- Job queue overflow --
+      - alert: PostFiatJQOverflow
+        expr: postfiatd_jq_trans_overflow > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Job queue transaction overflow"
+          description: "JQ overflow count is {{ $value }}. Node may be overloaded."
+
+  # ═══════════════════════════════════════════════════════════════
+  # INFRASTRUCTURE (host + docker)
+  # ═══════════════════════════════════════════════════════════════
+  - name: postfiatd_infra
+    interval: 30s
+    rules:
+
+      # -- CPU --
+      - alert: HostCPUHigh
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU usage >80% for 5m"
+          description: "CPU at {{ $value | printf \"%.1f\" }}%."
+
+      - alert: HostCPUCritical
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CPU usage >95%"
+          description: "CPU at {{ $value | printf \"%.1f\" }}%. Consensus participation at risk."
+
+      # -- Memory --
+      - alert: HostMemoryHigh
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Memory usage >85%"
+          description: "Memory at {{ $value | printf \"%.1f\" }}%."
+
+      - alert: HostMemoryCritical
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Memory usage >95%"
+          description: "OOM kill imminent. Memory at {{ $value | printf \"%.1f\" }}%."
+
+      # -- Swap --
+      - alert: HostSwapUsed
+        expr: node_memory_SwapTotal_bytes > 0 and (node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes) / node_memory_SwapTotal_bytes * 100 > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Swap usage >10%"
+          description: "Swap at {{ $value | printf \"%.1f\" }}%. Should be ~0 for validator."
+
+      # -- Disk --
+      - alert: HostDiskHigh
+        expr: 100 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100) > 75
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk usage >75%"
+          description: "Disk at {{ $value | printf \"%.1f\" }}%."
+
+      - alert: HostDiskCritical
+        expr: 100 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100) > 90
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk usage >90%"
+          description: "Disk at {{ $value | printf \"%.1f\" }}%. Ledger DB may run out of space."
+
+      # -- Disk will fill --
+      - alert: HostDiskWillFill24h
+        expr: predict_linear(node_filesystem_avail_bytes{mountpoint="/"}[6h], 24*3600) < 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk will fill within 24h at current rate"
+          description: "Based on 6h trend, root filesystem will be full in ~24h."
+
+      # -- Network errors --
+      - alert: HostNetworkErrors
+        expr: rate(node_network_receive_errs_total[5m]) > 0 or rate(node_network_transmit_errs_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Network interface errors detected"
+          description: "Packet errors on network interface. Even 1-2% matters for consensus timing."
+
+      # -- Docker container down --
+      - alert: PostFiatContainerDown
+        expr: absent(container_memory_usage_bytes{name="postfiatd"})
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "postfiatd container is down"
+          description: "cAdvisor cannot find the postfiatd container. Validator is offline."
+
+      # -- Container OOM --
+      - alert: PostFiatContainerOOM
+        expr: container_oom_events_total{name="postfiatd"} > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "postfiatd container OOM event"
+          description: "Container has {{ $value }} OOM events."
+
+      # -- Container restart --
+      - alert: PostFiatContainerRestarting
+        expr: rate(container_start_time_seconds{name="postfiatd"}[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "postfiatd container restarting frequently"
+          description: "Container appears to be restart-looping."
+
+      # -- Container CPU throttle --
+      - alert: PostFiatContainerCPUThrottled
+        expr: rate(container_cpu_cfs_throttled_periods_total{name="postfiatd"}[5m]) / rate(container_cpu_cfs_periods_total{name="postfiatd"}[5m]) > 0.25
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "postfiatd container CPU throttled >25%"
+          description: "Container is being CPU throttled. Consider raising limits."
+
+  # ═══════════════════════════════════════════════════════════════
+  # POST FIAT SPECIFIC — integrity, governance, economics
+  # ═══════════════════════════════════════════════════════════════
+  - name: postfiatd_integrity
+    interval: 60s
+    rules:
+
+      # -- Critical config file missing --
+      - alert: PostFiatConfigFileMissing
+        expr: postfiatd_config_file_exists == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical config file missing: {{ $labels.filename }}"
+          description: "{{ $labels.filename }} does not exist. Validator may stop functioning."
+
+      # -- Validator token missing specifically --
+      - alert: PostFiatValidatorTokenMissing
+        expr: postfiatd_config_file_exists{filename="validator-token.single"} == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Validator token file is MISSING"
+          description: "validator-token.single is missing — validator CANNOT sign validations."
+
+      # -- Validator keys file missing --
+      - alert: PostFiatValidatorKeysMissing
+        expr: postfiatd_config_file_exists{filename="validator-keys.json"} == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Validator keys file is MISSING"
+          description: "validator-keys.json is missing — this is an emergency."
+
+      # -- Config file changed (detect drift) --
+      - alert: PostFiatConfigFileChanged
+        expr: changes(postfiatd_config_file_modified_timestamp[1h]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Config file modified: {{ $labels.filename }}"
+          description: "{{ $labels.filename }} was modified in the last hour. Verify this was intentional."
+
+      # -- Quorum dropped --
+      - alert: PostFiatQuorumLow
+        expr: postfiatd_validation_quorum < 3 and postfiatd_validation_quorum > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Validation quorum is very low ({{ $value }})"
+          description: "Small network — your downtime has outsized impact."
+
+      # -- Fee spike --
+      - alert: PostFiatFeeSpike
+        expr: postfiatd_fee_drops_open_ledger > 50000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Open ledger fee spike ({{ $value }} drops)"
+          description: "Unusual fee levels may indicate network congestion or attack."
+
+      # -- Transaction queue building --
+      - alert: PostFiatTxQueueBuilding
+        expr: postfiatd_fee_current_queue_size > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Transaction queue building ({{ $value }} txns)"
+          description: "Transactions are queuing up. May indicate performance issues."
+
+      # -- Amendments vetoed --
+      - alert: PostFiatAmendmentVetoed
+        expr: postfiatd_amendments_vetoed_total > 0
+        for: 0m
+        labels:
+          severity: info
+        annotations:
+          summary: "{{ $value }} amendments are vetoed"
+          description: "Your node is vetoing amendments. Verify this aligns with network governance expectations."
+
+      # -- Exporter scrape failures --
+      - alert: PostFiatExporterScrapeErrors
+        expr: rate(postfiatd_scrape_errors_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "postfiatd exporter scrape errors increasing"
+          description: "Exporter is failing to scrape some RPC methods."
