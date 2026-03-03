@@ -15,6 +15,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+VERSION="$(cat VERSION 2>/dev/null | tr -d '[:space:]' || echo 'dev')"
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -185,8 +187,8 @@ send_startup_ping() {
 launch() {
     local compose_file="$1"
     echo ""
-    info "Starting services..."
-    docker compose -f "$compose_file" up -d --build
+    info "Starting services (v${VERSION})..."
+    docker compose -f "$compose_file" up -d --build --build-arg VERSION="${VERSION}"
     echo ""
     ok "Stack is running!"
 }
@@ -253,6 +255,7 @@ main() {
     echo ""
     echo -e "${CYAN}╔══════════════════════════════════════════╗${NC}"
     echo -e "${CYAN}║   Post Fiat Validator Monitor — Setup   ║${NC}"
+    echo -e "${CYAN}║   v${VERSION}$(printf '%*s' $((38 - ${#VERSION})) '')║${NC}"
     echo -e "${CYAN}╚══════════════════════════════════════════╝${NC}"
     echo ""
 
